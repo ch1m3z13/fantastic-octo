@@ -1,74 +1,98 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
 
+import '../../../core/app_export.dart';
+import '../../../widgets/custom_icon_widget.dart';
+
+/// Banner widget displaying pending booking requests notification
 class PendingRequestsBannerWidget extends StatelessWidget {
-  final int count;
+  final int requestCount;
+  final VoidCallback onTap;
 
   const PendingRequestsBannerWidget({
     super.key,
-    required this.count,
+    required this.requestCount,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    // Action color (Orange/Red) to denote urgency
-    const color = Color(0xFFFF5722); 
+    final theme = Theme.of(context);
 
-    return InkWell(
-      onTap: () {
-        // TODO: Navigate to PendingRequestsScreen
-        ScaffoldMessenger.of(context).showSnackBar(
-           const SnackBar(content: Text('Navigating to Pending Requests...')),
-        );
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.5.h),
-        decoration: BoxDecoration(
-          color: color,
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 4.w, vertical: 1.h),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            onTap();
+          },
           borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: color.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.notifications_active, color: Colors.white, size: 20),
-            ),
-            SizedBox(width: 3.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    "$count New Pickup Request${count > 1 ? 's' : ''}",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12.sp,
-                    ),
-                  ),
-                  Text(
-                    "Tap to review and accept",
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
-                      fontSize: 10.sp,
-                    ),
-                  ),
-                ],
+          child: Container(
+            padding: EdgeInsets.all(4.w),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF57C00).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFFF57C00).withValues(alpha: 0.3),
+                width: 1,
               ),
             ),
-            const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 16),
-          ],
+            child: Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.all(2.w),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF57C00),
+                    shape: BoxShape.circle,
+                  ),
+                  child: CustomIconWidget(
+                    iconName: 'notifications_active',
+                    color: theme.colorScheme.onPrimary,
+                    size: 24,
+                  ),
+                ),
+                SizedBox(width: 3.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pending Booking Requests',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFF57C00),
+                        ),
+                      ),
+                      SizedBox(height: 0.5.h),
+                      Text(
+                        'You have $requestCount new booking ${requestCount == 1 ? 'request' : 'requests'} to review',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 3.w, vertical: 1.h),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF57C00),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    requestCount.toString(),
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: theme.colorScheme.onPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

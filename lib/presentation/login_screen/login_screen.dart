@@ -1,23 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:sizer/sizer.dart';
-import '../../core/models/user_model.dart';
-import '../../core/providers/auth_provider.dart';
-import '../../widgets/custom_icon_widget.dart';
-import '../registration_screen/registration_screen.dart';
 
-class LoginScreen extends ConsumerStatefulWidget {
+import '../../core/app_export.dart';
+import '../../widgets/custom_icon_widget.dart';
+
+/// Login Screen for Abuja Commuter ridesharing application
+/// Provides secure authentication for both riders and drivers
+/// Implements mobile-optimized input with inline validation
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  ConsumerState<LoginScreen> createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends ConsumerState<LoginScreen> {
+class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
+
+  bool _isPasswordVisible = false;
+  bool _isLoading = false;
+  String? _usernameError;
+  String? _passwordError;
+
+  // Mock credentials for demo
+  final Map<String, Map<String, dynamic>> _mockUsers = {
+    'rider1': {
+      'password': 'rider123',
+      'role': 'rider',
+      'name': 'Chinedu Okafor',
+    },
+    'driver1': {
+      'password': 'driver123',
+      'role': 'driver',
+      'name': 'Amina Bello',
+    },
+  };
 
   @override
   void dispose() {
@@ -26,59 +46,115 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+  void _validateUsername(String value) {
+    setState(() {
+      if (value.isEmpty) {
+        _usernameError = 'Username is required';
+      } else if (value.length < 3) {
+        _usernameError = 'Username must be at least 3 characters';
+      } else {
+        _usernameError = null;
+      }
+    });
+  }
 
-    final authNotifier = ref.read(authProvider.notifier);
-    final success = await authNotifier.login(
-      LoginDTO(
-        username: _usernameController.text.trim(),
-        password: _passwordController.text,
+  void _validatePassword(String value) {
+    setState(() {
+      if (value.isEmpty) {
+        _passwordError = 'Password is required';
+      } else if (value.length < 6) {
+        _passwordError = 'Password must be at least 6 characters';
+      } else {
+        _passwordError = null;
+      }
+    });
+  }
+
+  bool _isFormValid() {
+    return _usernameController.text.isNotEmpty &&
+        _passwordController.text.isNotEmpty &&
+        _usernameError == null &&
+        _passwordError == null;
+  }
+
+  Future<void> _handleLogin() async {
+    if (!_isFormValid()) {
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    // Simulate network delay
+    await Future.delayed(const Duration(seconds: 1));
+
+    final username = _usernameController.text.trim();
+    final password = _passwordController.text;
+
+    // Check credentials
+    if (_mockUsers.containsKey(username)) {
+      final user = _mockUsers[username]!;
+      if (user['password'] == password) {
+        // Success - haptic feedback
+        HapticFeedback.mediumImpact();
+
+        if (!mounted) return;
+
+        // Navigate based on role
+        final route = user['role'] == 'driver'
+            ? '/driver-home-screen'
+            : '/active-ride-screen';
+
+        Navigator.pushReplacementNamed(context, route);
+        return;
+      }
+    }
+
+    // Failed login
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text(
+          'Invalid username or password. Try: rider1/rider123 or driver1/driver123',
+        ),
+        backgroundColor: Theme.of(context).colorScheme.error,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
       ),
     );
-
-    if (mounted) {
-      if (!success) {
-        final errorMessage = ref.read(authProvider).errorMessage;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage ?? 'Login failed'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      // Navigation is handled automatically by app.dart watching authProvider
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final authState = ref.watch(authProvider);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        child: Center(
+        child: GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
           child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 6.w),
+            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
             child: Form(
               key: _formKey,
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  SizedBox(height: 8.h),
                   _buildLogo(theme),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: 6.h),
                   _buildWelcomeText(theme),
                   SizedBox(height: 4.h),
                   _buildUsernameField(theme),
-                  SizedBox(height: 2.h),
-                  _buildPasswordField(theme),
-                  SizedBox(height: 1.h),
-                  _buildForgotPassword(theme),
                   SizedBox(height: 3.h),
-                  _buildLoginButton(theme, authState.isLoading),
+                  _buildPasswordField(theme),
                   SizedBox(height: 2.h),
+                  _buildForgotPassword(theme),
+                  SizedBox(height: 4.h),
+                  _buildLoginButton(theme),
+                  SizedBox(height: 3.h),
                   _buildRegisterLink(theme),
                 ],
               ),
@@ -147,53 +223,97 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Widget _buildUsernameField(ThemeData theme) {
-    return TextFormField(
-      controller: _usernameController,
-      decoration: InputDecoration(
-        labelText: 'Username',
-        hintText: 'Enter your username',
-        prefixIcon: const Icon(Icons.person_outline),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _usernameController,
+          onChanged: _validateUsername,
+          enabled: !_isLoading,
+          keyboardType: TextInputType.text,
+          textInputAction: TextInputAction.next,
+          decoration: InputDecoration(
+            labelText: 'Username',
+            hintText: 'Enter your username',
+            prefixIcon: Padding(
+              padding: EdgeInsets.all(3.w),
+              child: CustomIconWidget(
+                iconName: 'person_outline',
+                color: theme.colorScheme.onSurfaceVariant,
+                size: 6.w,
+              ),
+            ),
+            errorText: null,
+            errorMaxLines: 2,
+          ),
         ),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter your username';
-        }
-        return null;
-      },
+        if (_usernameError != null) ...[
+          SizedBox(height: 0.5.h),
+          Padding(
+            padding: EdgeInsets.only(left: 4.w),
+            child: Text(
+              _usernameError!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
   Widget _buildPasswordField(ThemeData theme) {
-    return TextFormField(
-      controller: _passwordController,
-      obscureText: _obscurePassword,
-      decoration: InputDecoration(
-        labelText: 'Password',
-        hintText: 'Enter your password',
-        prefixIcon: const Icon(Icons.lock_outline),
-        suffixIcon: IconButton(
-          icon: Icon(
-            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: _passwordController,
+          onChanged: _validatePassword,
+          enabled: !_isLoading,
+          obscureText: !_isPasswordVisible,
+          keyboardType: TextInputType.visiblePassword,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _handleLogin(),
+          decoration: InputDecoration(
+            labelText: 'Password',
+            hintText: 'Enter your password',
+            prefixIcon: Padding(
+              padding: EdgeInsets.all(3.w),
+              child: CustomIconWidget(
+                iconName: 'lock_outline',
+                color: theme.colorScheme.onSurfaceVariant,
+                size: 6.w,
+              ),
+            ),
+            suffixIcon: IconButton(
+              icon: CustomIconWidget(
+                iconName: _isPasswordVisible ? 'visibility' : 'visibility_off',
+                color: theme.colorScheme.onSurfaceVariant,
+                size: 6.w,
+              ),
+              onPressed: () {
+                setState(() => _isPasswordVisible = !_isPasswordVisible);
+                HapticFeedback.lightImpact();
+              },
+            ),
+            errorText: null,
+            errorMaxLines: 2,
           ),
-          onPressed: () {
-            setState(() {
-              _obscurePassword = !_obscurePassword;
-            });
-          },
         ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter your password';
-        }
-        return null;
-      },
+        if (_passwordError != null) ...[
+          SizedBox(height: 0.5.h),
+          Padding(
+            padding: EdgeInsets.only(left: 4.w),
+            child: Text(
+              _passwordError!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
@@ -201,12 +321,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Align(
       alignment: Alignment.centerRight,
       child: TextButton(
-        onPressed: () {
-          // TODO: Implement forgot password
-        },
+        onPressed: _isLoading
+            ? null
+            : () {
+                HapticFeedback.lightImpact();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Password reset feature coming soon'),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              },
         child: Text(
           'Forgot Password?',
-          style: theme.textTheme.bodySmall?.copyWith(
+          style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.primary,
             fontWeight: FontWeight.w500,
           ),
@@ -215,23 +343,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     );
   }
 
-  Widget _buildLoginButton(ThemeData theme, bool isLoading) {
+  Widget _buildLoginButton(ThemeData theme) {
     return SizedBox(
-      width: double.infinity,
       height: 6.h,
       child: ElevatedButton(
-        onPressed: isLoading ? null : _handleLogin,
+        onPressed: _isFormValid() && !_isLoading ? _handleLogin : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: theme.colorScheme.primary,
           foregroundColor: theme.colorScheme.onPrimary,
+          disabledBackgroundColor: theme.colorScheme.onSurface.withValues(
+            alpha: 0.12,
+          ),
+          disabledForegroundColor: theme.colorScheme.onSurface.withValues(
+            alpha: 0.38,
+          ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(2.w),
           ),
         ),
-        child: isLoading
+        child: _isLoading
             ? SizedBox(
-                height: 2.5.h,
-                width: 2.5.h,
+                height: 5.w,
+                width: 5.w,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
                   valueColor: AlwaysStoppedAnimation<Color>(
@@ -240,9 +373,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ),
               )
             : Text(
-                'Sign In',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: theme.colorScheme.onPrimary,
+                'Login',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -255,22 +388,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          "Don't have an account? ",
+          'New user? ',
           style: theme.textTheme.bodyMedium?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
         TextButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const RegistrationScreen(),
-              ),
-            );
-          },
+          onPressed: _isLoading
+              ? null
+              : () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pushNamed(context, '/registration-screen');
+                },
           child: Text(
-            'Sign Up',
+            'Register here',
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.primary,
               fontWeight: FontWeight.w600,

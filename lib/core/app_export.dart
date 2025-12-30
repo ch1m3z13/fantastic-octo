@@ -1,12 +1,6 @@
-// lib/core/app_export.dart - Core exports
-export 'constants/api_constants.dart';
-export 'api/api_service.dart';
-export 'models/user_model.dart';
-export 'repositories/auth_repository.dart';
-export 'providers/auth_provider.dart';
-
-// Theme
-export '../theme/app_theme.dart';
-
-// Routes
+export 'package:connectivity_plus/connectivity_plus.dart';
+export 'package:google_fonts/google_fonts.dart';
 export '../routes/app_routes.dart';
+export '../widgets/custom_icon_widget.dart';
+export '../widgets/custom_image_widget.dart';
+export '../theme/app_theme.dart';
