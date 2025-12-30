@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 
 import '../../core/app_export.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/custom_icon_widget.dart';
 
 /// Splash Screen for Abuja Commuter
@@ -58,47 +60,36 @@ class _SplashScreenState extends State<SplashScreen>
     });
 
     try {
-      // Simulate checking authentication tokens
-      await Future.delayed(const Duration(seconds: 1));
+      // Initialize authentication service
+      final authService = context.read<AuthService>();
+      await authService.initialize();
 
-      // Simulate loading user preferences
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // Simulate fetching route configurations
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // Simulate preparing cached virtual bus stop data
+      // Additional initialization tasks can be added here:
+      // - Load user preferences
+      // - Fetch route configurations
+      // - Prepare cached virtual bus stop data
+      // - Initialize analytics/crash reporting
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (!mounted) return;
 
-      // Mock authentication check - in production, check actual auth tokens
-      final bool isAuthenticated = false; // Mock: user not authenticated
-      final String userRole = 'rider'; // Mock: could be 'rider' or 'driver'
+      // Ensure smooth animation completion
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (!mounted) return;
 
       // Navigate based on authentication status
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      if (!mounted) return;
-
-      if (isAuthenticated) {
-        if (userRole == 'driver') {
-          // Navigate to Driver Home (not implemented in this screen)
-          Navigator.pushReplacementNamed(context, '/splash-screen');
-        } else {
-          // Navigate to Rider Home (not implemented in this screen)
-          Navigator.pushReplacementNamed(context, '/splash-screen');
-        }
-      } else {
-        // Navigate to Login Screen (not implemented in this screen)
-        Navigator.pushReplacementNamed(context, '/splash-screen');
-      }
+      final route = authService.getHomeRoute();
+      Navigator.pushReplacementNamed(context, route);
+      
     } catch (e) {
       // Handle initialization errors
+      debugPrint('Initialization error: $e');
+      
       if (!mounted) return;
 
-      // Show retry option after 5 seconds
-      await Future.delayed(const Duration(seconds: 5));
+      // Show retry option after 2 seconds
+      await Future.delayed(const Duration(seconds: 2));
 
       if (!mounted) return;
 

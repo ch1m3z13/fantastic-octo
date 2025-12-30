@@ -296,7 +296,7 @@ class CustomBottomBar extends StatelessWidget {
         label: 'Manifest',
         icon: Icons.qr_code_scanner_outlined,
         activeIcon: Icons.qr_code_scanner,
-        route: '/driver-manifest-and-qr-scanner-screen',
+        route: '/manifest-screen',
       ),
       CustomBottomBarItem(
         label: 'Profile',

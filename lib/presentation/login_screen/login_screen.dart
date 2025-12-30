@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/custom_icon_widget.dart';
 
 /// Login Screen for Abuja Commuter ridesharing application
@@ -24,20 +26,6 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String? _usernameError;
   String? _passwordError;
-
-  // Mock credentials for demo
-  final Map<String, Map<String, dynamic>> _mockUsers = {
-    'rider1': {
-      'password': 'rider123',
-      'role': 'rider',
-      'name': 'Chinedu Okafor',
-    },
-    'driver1': {
-      'password': 'driver123',
-      'role': 'driver',
-      'name': 'Amina Bello',
-    },
-  };
 
   @override
   void dispose() {
@@ -84,46 +72,48 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 1));
+    try {
+      final authService = context.read<AuthService>();
+      final success = await authService.login(
+        _usernameController.text.trim(),
+        _passwordController.text,
+      );
 
-    final username = _usernameController.text.trim();
-    final password = _passwordController.text;
+      if (!mounted) return;
 
-    // Check credentials
-    if (_mockUsers.containsKey(username)) {
-      final user = _mockUsers[username]!;
-      if (user['password'] == password) {
-        // Success - haptic feedback
+      setState(() => _isLoading = false);
+
+      if (success) {
         HapticFeedback.mediumImpact();
-
-        if (!mounted) return;
-
-        // Navigate based on role
-        final route = user['role'] == 'driver'
-            ? '/driver-home-screen'
-            : '/active-ride-screen';
-
+        
+        // Navigate to appropriate home screen
+        final route = authService.getHomeRoute();
         Navigator.pushReplacementNamed(context, route);
-        return;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Invalid username or password. Try: rider1/rider123 or driver1/driver123',
+            ),
+            backgroundColor: Theme.of(context).colorScheme.error,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
-    }
-
-    // Failed login
-    setState(() => _isLoading = false);
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'Invalid username or password. Try: rider1/rider123 or driver1/driver123',
+    } catch (e) {
+      if (!mounted) return;
+      
+      setState(() => _isLoading = false);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login error: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+          behavior: SnackBarBehavior.floating,
         ),
-        backgroundColor: Theme.of(context).colorScheme.error,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
-      ),
-    );
+      );
+    }
   }
 
   @override

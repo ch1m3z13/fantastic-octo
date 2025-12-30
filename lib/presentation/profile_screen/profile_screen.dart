@@ -22,7 +22,7 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  int _currentBottomNavIndex = 3; // Profile tab active
+  final int _currentBottomNavIndex = 3; // Profile tab active
   bool _notificationsEnabled = true;
   bool _darkModeEnabled = false;
 
