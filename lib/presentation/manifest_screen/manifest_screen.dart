@@ -20,7 +20,7 @@ class ManifestScreen extends StatefulWidget {
 
 class _ManifestScreenState extends State<ManifestScreen> {
   int _currentBottomNavIndex = 1;
-  bool _isOnline = true;
+  final bool _isOnline = true;
 
   final List<Map<String, dynamic>> _passengers = [
     {

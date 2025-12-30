@@ -453,7 +453,7 @@ class _MyBookingsScreenState extends State<MyBookingsScreen>
               _buildDetailRow('Fare', booking["price"] as String),
               _buildDetailRow(
                 'Seats',
-                booking["seats"].toString() + ' passenger(s)',
+                '${booking["seats"]} passenger(s)',
               ),
               _buildDetailRow('Status', booking["status"] as String),
               _buildDetailRow(

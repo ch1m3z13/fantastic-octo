@@ -24,7 +24,7 @@ class RiderHomeScreen extends StatefulWidget {
 class _RiderHomeScreenState extends State<RiderHomeScreen> {
   int _currentBottomNavIndex = 0;
   bool _isLocationEnabled = true;
-  bool _isNetworkConnected = true;
+  final bool _isNetworkConnected = true;
   bool _isRefreshing = false;
 
   // Mock user data

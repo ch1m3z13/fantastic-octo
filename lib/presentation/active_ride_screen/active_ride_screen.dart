@@ -25,7 +25,7 @@ class _ActiveRideScreenState extends State<ActiveRideScreen> {
   final Set<Marker> _markers = {};
   final Set<Polyline> _polylines = {};
   bool _isLoading = true;
-  String _currentStatus = "Driver En Route";
+  final String _currentStatus = "Driver En Route";
   String? _estimatedTime = "5 mins";
 
   // Mock data for active ride

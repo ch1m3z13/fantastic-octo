@@ -357,7 +357,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     Navigator.pop(context);
                   },
                 );
-              }).toList(),
+              }),
               SizedBox(height: 2.h),
             ],
           ),
