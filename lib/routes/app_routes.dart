@@ -14,6 +14,7 @@ import '../presentation/available_routes_screen/available_routes_screen.dart';
 import '../presentation/my_bookings_screen/my_bookings_screen.dart';
 import '../presentation/manifest_screen/manifest_screen.dart';
 import '../presentation/qr_code_scanner_screen/qr_code_scanner_screen.dart';
+import '../presentation/wallet_screen/wallet_screen.dart';
 
 class AppRoutes {
   // TODO: Add your routes here
@@ -34,6 +35,7 @@ class AppRoutes {
   static const String myBookings = '/my-bookings-screen';
   static const String manifest = '/manifest-screen';
   static const String qrCodeScanner = '/qr-code-scanner-screen';
+  static const String wallet = '/wallet-screen';
 
   static Map<String, WidgetBuilder> routes = {
     initial: (context) => const SplashScreen(),
@@ -52,6 +54,7 @@ class AppRoutes {
     myBookings: (context) => const MyBookingsScreen(),
     manifest: (context) => const ManifestScreen(),
     qrCodeScanner: (context) => const QrCodeScannerScreen(),
+    wallet: (context) => const WalletScreen(),
     // TODO: Add your other routes here
   };
 }
