@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
 import '../../services/auth_service.dart';
-import '../../widgets/custom_icon_widget.dart';
 
-/// Login Screen for Abuja Commuter ridesharing application
-/// Provides secure authentication for both riders and drivers
-/// Implements mobile-optimized input with inline validation
+/// Login Screen for Abuja Commuter
+/// Provides username/password authentication with mock authentication
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -22,10 +21,8 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  bool _isPasswordVisible = false;
-  bool _isLoading = false;
-  String? _usernameError;
-  String? _passwordError;
+  bool _isProcessing = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -34,43 +31,35 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _validateUsername(String value) {
-    setState(() {
-      if (value.isEmpty) {
-        _usernameError = 'Username is required';
-      } else if (value.length < 3) {
-        _usernameError = 'Username must be at least 3 characters';
-      } else {
-        _usernameError = null;
-      }
-    });
+  /// Validate username
+  String? _validateUsername(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Username is required';
+    }
+    if (value.length < 3) {
+      return 'Username must be at least 3 characters';
+    }
+    return null;
   }
 
-  void _validatePassword(String value) {
-    setState(() {
-      if (value.isEmpty) {
-        _passwordError = 'Password is required';
-      } else if (value.length < 6) {
-        _passwordError = 'Password must be at least 6 characters';
-      } else {
-        _passwordError = null;
-      }
-    });
+  /// Validate password
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Password is required';
+    }
+    if (value.length < 6) {
+      return 'Password must be at least 6 characters';
+    }
+    return null;
   }
 
-  bool _isFormValid() {
-    return _usernameController.text.isNotEmpty &&
-        _passwordController.text.isNotEmpty &&
-        _usernameError == null &&
-        _passwordError == null;
-  }
-
+  /// Handle login button press
   Future<void> _handleLogin() async {
-    if (!_isFormValid()) {
+    if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() => _isProcessing = true);
 
     try {
       final authService = context.read<AuthService>();
@@ -81,19 +70,28 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      setState(() => _isLoading = false);
+      setState(() => _isProcessing = false);
 
       if (success) {
         HapticFeedback.mediumImpact();
-        
-        // Navigate to appropriate home screen
+
+        // Navigate to appropriate home screen based on role
         final route = authService.getHomeRoute();
         Navigator.pushReplacementNamed(context, route);
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Welcome back, ${authService.userName ?? 'User'}!'),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
-              'Invalid username or password. Try: rider1/rider123 or driver1/driver123',
+              'Invalid username or password.',
             ),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
@@ -103,14 +101,16 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      
-      setState(() => _isLoading = false);
-      
+
+      setState(() => _isProcessing = false);
+
+      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Login error: $e'),
           backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
         ),
       );
     }
@@ -121,284 +121,220 @@ class _LoginScreenState extends State<LoginScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+      backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           child: SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 4.h),
+            padding: EdgeInsets.symmetric(horizontal: 6.w),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(height: 8.h),
-                  _buildLogo(theme),
-                  SizedBox(height: 6.h),
-                  _buildWelcomeText(theme),
+
+                  // Logo
+                  Center(
+                    child: Container(
+                      width: 25.w,
+                      height: 25.w,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary,
+                        borderRadius: BorderRadius.circular(20.0),
+                      ),
+                      child: Center(
+                        child: SvgPicture.asset(
+                          'assets/images/img_app_logo.svg',
+                          width: 15.w,
+                          height: 15.w,
+                          colorFilter: ColorFilter.mode(
+                            Colors.white,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                   SizedBox(height: 4.h),
-                  _buildUsernameField(theme),
-                  SizedBox(height: 3.h),
-                  _buildPasswordField(theme),
+
+                  // Welcome Text
+                  Text(
+                    'Welcome Back',
+                    style: theme.textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 1.h),
+                  Text(
+                    'Sign in to continue your journey',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 5.h),
+
+                  // Username Field (changed from email)
+                  TextFormField(
+                    controller: _usernameController,
+                    keyboardType: TextInputType.text,
+                    textInputAction: TextInputAction.next,
+                    enabled: !_isProcessing,
+                    validator: _validateUsername,
+                    decoration: InputDecoration(
+                      labelText: 'Username',
+                      hintText: 'Enter your username',
+                      prefixIcon: Icon(Icons.person_outline),
+                    ),
+                  ),
                   SizedBox(height: 2.h),
-                  _buildForgotPassword(theme),
-                  SizedBox(height: 4.h),
-                  _buildLoginButton(theme),
+
+                  // Password Field
+                  TextFormField(
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    enabled: !_isProcessing,
+                    validator: _validatePassword,
+                    onFieldSubmitted: (_) => _handleLogin(),
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      hintText: 'Enter your password',
+                      prefixIcon: Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onPressed: () {
+                          setState(() => _obscurePassword = !_obscurePassword);
+                          HapticFeedback.lightImpact();
+                        },
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 1.h),
+
+                  // Forgot Password
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: _isProcessing
+                          ? null
+                          : () {
+                              HapticFeedback.lightImpact();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Password reset feature coming soon',
+                                  ),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            },
+                      child: Text(
+                        'Forgot Password?',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
                   SizedBox(height: 3.h),
-                  _buildRegisterLink(theme),
+
+                  // Login Button
+                  SizedBox(
+                    height: 6.h,
+                    child: ElevatedButton(
+                      onPressed: _isProcessing ? null : _handleLogin,
+                      child: _isProcessing
+                          ? SizedBox(
+                              height: 2.5.h,
+                              width: 2.5.h,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  theme.colorScheme.onPrimary,
+                                ),
+                              ),
+                            )
+                          : Text(
+                              'Sign In',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: theme.colorScheme.onPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  ),
+                  SizedBox(height: 3.h),
+
+                  // Divider
+                  Row(
+                    children: [
+                      Expanded(child: Divider()),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 3.w),
+                        child: Text(
+                          'OR',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.5,
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider()),
+                    ],
+                  ),
+                  SizedBox(height: 3.h),
+
+                  // Register Link
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        "Don't have an account? ",
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.7,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _isProcessing
+                            ? null
+                            : () {
+                                HapticFeedback.lightImpact();
+                                Navigator.pushNamed(context, '/registration-screen');
+                              },
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: Text(
+                          'Sign Up',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 2.h),
                 ],
               ),
             ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildLogo(ThemeData theme) {
-    return Center(
-      child: Container(
-        width: 30.w,
-        height: 30.w,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primary,
-          shape: BoxShape.circle,
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CustomIconWidget(
-                iconName: 'directions_bus',
-                color: theme.colorScheme.onPrimary,
-                size: 12.w,
-              ),
-              SizedBox(height: 1.h),
-              Text(
-                'AC',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: theme.colorScheme.onPrimary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16.sp,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildWelcomeText(ThemeData theme) {
-    return Column(
-      children: [
-        Text(
-          'Welcome Back',
-          style: theme.textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-            color: theme.colorScheme.onSurface,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        SizedBox(height: 1.h),
-        Text(
-          'Sign in to continue your journey',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildUsernameField(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: _usernameController,
-          onChanged: _validateUsername,
-          enabled: !_isLoading,
-          keyboardType: TextInputType.text,
-          textInputAction: TextInputAction.next,
-          decoration: InputDecoration(
-            labelText: 'Username',
-            hintText: 'Enter your username',
-            prefixIcon: Padding(
-              padding: EdgeInsets.all(3.w),
-              child: CustomIconWidget(
-                iconName: 'person_outline',
-                color: theme.colorScheme.onSurfaceVariant,
-                size: 6.w,
-              ),
-            ),
-            errorText: null,
-            errorMaxLines: 2,
-          ),
-        ),
-        if (_usernameError != null) ...[
-          SizedBox(height: 0.5.h),
-          Padding(
-            padding: EdgeInsets.only(left: 4.w),
-            child: Text(
-              _usernameError!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildPasswordField(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: _passwordController,
-          onChanged: _validatePassword,
-          enabled: !_isLoading,
-          obscureText: !_isPasswordVisible,
-          keyboardType: TextInputType.visiblePassword,
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _handleLogin(),
-          decoration: InputDecoration(
-            labelText: 'Password',
-            hintText: 'Enter your password',
-            prefixIcon: Padding(
-              padding: EdgeInsets.all(3.w),
-              child: CustomIconWidget(
-                iconName: 'lock_outline',
-                color: theme.colorScheme.onSurfaceVariant,
-                size: 6.w,
-              ),
-            ),
-            suffixIcon: IconButton(
-              icon: CustomIconWidget(
-                iconName: _isPasswordVisible ? 'visibility' : 'visibility_off',
-                color: theme.colorScheme.onSurfaceVariant,
-                size: 6.w,
-              ),
-              onPressed: () {
-                setState(() => _isPasswordVisible = !_isPasswordVisible);
-                HapticFeedback.lightImpact();
-              },
-            ),
-            errorText: null,
-            errorMaxLines: 2,
-          ),
-        ),
-        if (_passwordError != null) ...[
-          SizedBox(height: 0.5.h),
-          Padding(
-            padding: EdgeInsets.only(left: 4.w),
-            child: Text(
-              _passwordError!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
-              ),
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildForgotPassword(ThemeData theme) {
-    return Align(
-      alignment: Alignment.centerRight,
-      child: TextButton(
-        onPressed: _isLoading
-            ? null
-            : () {
-                HapticFeedback.lightImpact();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Password reset feature coming soon'),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
-        child: Text(
-          'Forgot Password?',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoginButton(ThemeData theme) {
-    return SizedBox(
-      height: 6.h,
-      child: ElevatedButton(
-        onPressed: _isFormValid() && !_isLoading ? _handleLogin : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: theme.colorScheme.onPrimary,
-          disabledBackgroundColor: theme.colorScheme.onSurface.withValues(
-            alpha: 0.12,
-          ),
-          disabledForegroundColor: theme.colorScheme.onSurface.withValues(
-            alpha: 0.38,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(2.w),
-          ),
-        ),
-        child: _isLoading
-            ? SizedBox(
-                height: 5.w,
-                width: 5.w,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    theme.colorScheme.onPrimary,
-                  ),
-                ),
-              )
-            : Text(
-                'Login',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-      ),
-    );
-  }
-
-  Widget _buildRegisterLink(ThemeData theme) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          'New user? ',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        TextButton(
-          onPressed: _isLoading
-              ? null
-              : () {
-                  HapticFeedback.lightImpact();
-                  Navigator.pushNamed(context, '/registration-screen');
-                },
-          child: Text(
-            'Register here',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

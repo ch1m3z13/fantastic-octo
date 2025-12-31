@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/app_export.dart';
-import '../../services/auth_service.dart';
-import '../../widgets/custom_icon_widget.dart';
 
 /// Splash Screen for Abuja Commuter
 /// Provides branded app launch experience while initializing core services
@@ -60,36 +58,48 @@ class _SplashScreenState extends State<SplashScreen>
     });
 
     try {
-      // Initialize authentication service
-      final authService = context.read<AuthService>();
-      await authService.initialize();
+      // Simulate checking authentication tokens
+      await Future.delayed(const Duration(seconds: 1));
 
-      // Additional initialization tasks can be added here:
-      // - Load user preferences
-      // - Fetch route configurations
-      // - Prepare cached virtual bus stop data
-      // - Initialize analytics/crash reporting
+      // Simulate loading user preferences
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Simulate fetching route configurations
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Simulate preparing cached virtual bus stop data
       await Future.delayed(const Duration(milliseconds: 500));
 
       if (!mounted) return;
 
-      // Ensure smooth animation completion
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      if (!mounted) return;
+      // Check actual authentication status from SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      final bool isAuthenticated = prefs.getBool('isAuthenticated') ?? false;
+      final String userRole = prefs.getString('userRole') ?? 'rider';
 
       // Navigate based on authentication status
-      final route = authService.getHomeRoute();
-      Navigator.pushReplacementNamed(context, route);
-      
-    } catch (e) {
-      // Handle initialization errors
-      debugPrint('Initialization error: $e');
-      
+      await Future.delayed(const Duration(milliseconds: 500));
+
       if (!mounted) return;
 
-      // Show retry option after 2 seconds
-      await Future.delayed(const Duration(seconds: 2));
+      if (isAuthenticated) {
+        if (userRole == 'driver') {
+          // Navigate to Driver Home (Manifest Screen)
+          Navigator.pushReplacementNamed(context, AppRoutes.manifest);
+        } else {
+          // Navigate to Rider Home (My Bookings Screen)
+          Navigator.pushReplacementNamed(context, AppRoutes.myBookings);
+        }
+      } else {
+        // Navigate to Login Screen
+        Navigator.pushReplacementNamed(context, AppRoutes.login);
+      }
+    } catch (e) {
+      // Handle initialization errors
+      if (!mounted) return;
+
+      // Show retry option after 5 seconds
+      await Future.delayed(const Duration(seconds: 5));
 
       if (!mounted) return;
 
