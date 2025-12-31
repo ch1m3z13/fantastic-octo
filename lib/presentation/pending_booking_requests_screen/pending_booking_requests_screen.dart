@@ -160,7 +160,7 @@ class _PendingBookingRequestsScreenState
           onPressed: () {
             Navigator.pushNamed(
               context,
-              '/driver-manifest-and-qr-scanner-screen',
+              AppRoutes.manifest, // ✅ Fixed
             );
           },
         ),

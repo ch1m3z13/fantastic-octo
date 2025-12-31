@@ -22,6 +22,9 @@ dependencies:
   cached_network_image: ^3.3.1
   connectivity_plus: ^6.1.4
   dio: ^5.4.0
+  json_annotation: ^4.8.1
+  logger: ^2.0.2
+  flutter_secure_storage: ^9.0.0
   fluttertoast: ^8.2.4
   fl_chart: ^0.65.0
   flutter_slidable: ^4.0.3
@@ -39,6 +42,8 @@ dev_dependencies:
   flutter_test:    # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
     sdk: flutter   # CRITICAL: Required for Flutter project testing - DO NOT REMOVE
   flutter_lints: ^5.0.0 # CRITICAL: Required for code quality - DO NOT REMOVE
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
 
 flutter:
   uses-material-design: true # CRITICAL: Required for Material icon font - DO NOT REMOVE

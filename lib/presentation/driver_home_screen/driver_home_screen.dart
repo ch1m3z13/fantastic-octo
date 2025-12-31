@@ -174,6 +174,55 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
   }
 
+  void _handleManifestOptions() {
+    HapticFeedback.lightImpact();
+
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: EdgeInsets.all(4.w),
+              child: Text(
+                'Passenger Management',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            ListTile(
+              leading: CustomIconWidget(
+                iconName: 'list_alt',
+                color: Theme.of(context).colorScheme.primary,
+                size: 24,
+              ),
+              title: const Text('View Manifest'),
+              subtitle: const Text('See all passengers for today\'s route'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.manifest);
+              },
+            ),
+            ListTile(
+              leading: CustomIconWidget(
+                iconName: 'qr_code_scanner',
+                color: Theme.of(context).colorScheme.primary,
+                size: 24,
+              ),
+              title: const Text('Scan QR Code'),
+              subtitle: const Text('Verify passenger boarding'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, AppRoutes.qrCodeScanner);
+              },
+            ),
+            SizedBox(height: 2.h),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _getTimeUntilDeparture() {
     // Mock calculation - in real app, calculate from actual departure time
     return "2h 15m";
@@ -252,18 +301,12 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
 
                     SizedBox(height: 2.h),
 
-                    // Today's manifest card
+                    // Today's manifest card - FIXED: Now shows options
                     ManifestCardWidget(
                       totalPassengers: todayRoute["totalPassengers"] as int,
                       confirmedPassengers:
                           todayRoute["confirmedPassengers"] as int,
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        Navigator.pushNamed(
-                          context,
-                          '/driver-manifest-and-qr-scanner-screen',
-                        );
-                      },
+                      onTap: _handleManifestOptions, // ✅ Fixed
                     ),
 
                     SizedBox(height: 2.h),

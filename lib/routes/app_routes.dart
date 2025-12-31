@@ -17,14 +17,12 @@ import '../presentation/qr_code_scanner_screen/qr_code_scanner_screen.dart';
 import '../presentation/wallet_screen/wallet_screen.dart';
 
 class AppRoutes {
-  // TODO: Add your routes here
   static const String initial = '/';
   static const String splashScreen = '/splash-screen';
   static const String login = '/login-screen';
   static const String activeRide = '/active-ride-screen';
   static const String driverHome = '/driver-home-screen';
-  static const String pendingBookingRequests =
-      '/pending-booking-requests-screen';
+  static const String pendingBookingRequests = '/pending-booking-requests-screen';
   static const String registration = '/registration-screen';
   static const String riderHome = '/rider-home-screen';
   static const String routeDetails = '/route-details-screen';
@@ -39,7 +37,7 @@ class AppRoutes {
 
   static Map<String, WidgetBuilder> routes = {
     initial: (context) => const SplashScreen(),
-   // splashScreen: (context) => const SplashScreen(),
+    splashScreen: (context) => const SplashScreen(),
     login: (context) => const LoginScreen(),
     activeRide: (context) => const ActiveRideScreen(),
     driverHome: (context) => const DriverHomeScreen(),
@@ -55,6 +53,5 @@ class AppRoutes {
     manifest: (context) => const ManifestScreen(),
     qrCodeScanner: (context) => const QrCodeScannerScreen(),
     wallet: (context) => const WalletScreen(),
-    // TODO: Add your other routes here
   };
 }
