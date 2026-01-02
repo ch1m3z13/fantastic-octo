@@ -2,10 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../core/api/auth_api_service.dart';
+import '../core/api/api_client.dart';
 import '../core/models/auth_models.dart';
 
-/// Authentication service to manage user login state
-/// Now uses real API calls instead of mock data
 class AuthService extends ChangeNotifier {
   static final AuthService _instance = AuthService._internal();
   factory AuthService() => _instance;
@@ -14,12 +13,12 @@ class AuthService extends ChangeNotifier {
   final AuthApiService _authApi = AuthApiService();
 
   bool _isAuthenticated = false;
-  String? _userRole; // 'driver' or 'rider'
+  String? _userRole;
   String? _userId;
   String? _userName;
   String? _userEmail;
   String? _userPhone;
-  String? _roles; // Store the actual roles string from backend
+  String? _roles;
 
   bool get isAuthenticated => _isAuthenticated;
   String? get userRole => _userRole;
@@ -43,12 +42,10 @@ class AuthService extends ChangeNotifier {
       _userPhone = prefs.getString('userPhone');
       _roles = prefs.getString('roles');
       
-      // If authenticated, verify token is still valid
       if (_isAuthenticated) {
         try {
           await _authApi.getCurrentUser();
         } catch (e) {
-          // Token invalid, clear authentication
           debugPrint('Token validation failed: $e');
           await logout();
         }
@@ -60,7 +57,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// Login with username and password using real API
   Future<bool> login(String username, String password) async {
     try {
       final response = await _authApi.login(username, password);
@@ -72,14 +68,12 @@ class AuthService extends ChangeNotifier {
       _userPhone = response.user.phoneNumber;
       _roles = response.user.roles;
       
-      // Set primary role based on what user has
       if (response.user.isDriver) {
         _userRole = 'driver';
       } else {
         _userRole = 'rider';
       }
 
-      // Save to storage
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isAuthenticated', true);
       await prefs.setString('userRole', _userRole!);
@@ -89,6 +83,13 @@ class AuthService extends ChangeNotifier {
       await prefs.setString('userPhone', _userPhone!);
       await prefs.setString('roles', _roles!);
 
+      // 🔥 Save token to FlutterSecureStorage via ApiClient
+      await ApiClient().setToken(response.token);
+      
+      // Add debugging
+      final savedToken = await ApiClient().getToken();
+      debugPrint('🔑 Token saved: ${savedToken?.substring(0, 20)}...');
+
       notifyListeners();
       return true;
     } catch (e) {
@@ -97,7 +98,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// Register new user using real API
   Future<Map<String, dynamic>> register({
     required String username,
     required String password,
@@ -123,14 +123,12 @@ class AuthService extends ChangeNotifier {
       _userPhone = response.user.phoneNumber;
       _roles = response.user.roles;
       
-      // Set primary role
       if (response.user.isDriver) {
         _userRole = 'driver';
       } else {
         _userRole = 'rider';
       }
 
-      // Save to storage
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('isAuthenticated', true);
       await prefs.setString('userRole', _userRole!);
@@ -139,6 +137,9 @@ class AuthService extends ChangeNotifier {
       await prefs.setString('userEmail', _userEmail!);
       await prefs.setString('userPhone', _userPhone!);
       await prefs.setString('roles', _roles!);
+
+      // Save token
+      await ApiClient().setToken(response.token);
 
       notifyListeners();
       
@@ -149,15 +150,15 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// Logout current user
   Future<void> logout() async {
     try {
-      // Clear API tokens
       await _authApi.logout();
       
-      // Clear local storage
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
+      
+      // Clear token from ApiClient
+      await ApiClient().clearTokens();
 
       _isAuthenticated = false;
       _userRole = null;
@@ -173,7 +174,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// Get current user info from API
   Future<UserInfo?> getUserInfo() async {
     try {
       return await _authApi.getCurrentUser();
@@ -183,7 +183,6 @@ class AuthService extends ChangeNotifier {
     }
   }
 
-  /// Get home route based on user role
   String getHomeRoute() {
     if (!_isAuthenticated) return '/login-screen';
     return _userRole == 'driver' ? '/driver-home-screen' : '/rider-home-screen';

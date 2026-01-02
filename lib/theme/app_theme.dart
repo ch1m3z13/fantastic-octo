@@ -14,7 +14,7 @@ class AppTheme {
 
   // Accent and state colors
   static const Color accentLight = Color(0xFFFF6F00);
-  static const Color backgroundLight = Color(0xFAFAFA);
+  static const Color backgroundLight = Color(0x00fafafa);
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color errorLight = Color(0xFFD32F2F);
   static const Color successLight = Color(0xFF388E3C);
