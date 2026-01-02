@@ -4,7 +4,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 
-import '../../core/app_export.dart';
 import '../../services/auth_service.dart';
 
 /// Login Screen for Abuja Commuter
@@ -177,7 +176,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   SizedBox(height: 5.h),
 
-                  // Username Field (changed from email)
                   TextFormField(
                     controller: _usernameController,
                     keyboardType: TextInputType.text,

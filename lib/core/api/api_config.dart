@@ -24,6 +24,7 @@ class ApiConfig {
   // Route endpoints
   static const String routesEndpoint = '/routes';
   static const String nearbyRoutesEndpoint = '/routes/nearby';
+  static String get headingToRoutesEndpoint => '/routes/heading-to';
   
   // Driver endpoints
   static const String driverStatsEndpoint = '/api/v1/drivers/stats';

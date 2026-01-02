@@ -67,14 +67,29 @@ class ApiClient {
     RequestInterceptorHandler handler,
   ) async {
     try {
-      // Get token from secure storage
-      final token = await _storage.read(key: ApiConfig.tokenKey);
+      // List of public endpoints that don't need authentication
+      final publicEndpoints = [
+        '/auth/login',
+        '/auth/register',
+        '/users/register',
+        '/routes/nearby',
+        '/routes/heading-to',
+      ];
 
-      if (token != null) {
-        options.headers['Authorization'] = 'Bearer $token';
+      // Check if this is a public endpoint
+      final isPublicEndpoint = publicEndpoints.any(
+        (endpoint) => options.path.contains(endpoint),
+      );
+
+      // Only add token for non-public endpoints
+      if (!isPublicEndpoint) {
+        final token = await _storage.read(key: ApiConfig.tokenKey);
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
+        }
       }
 
-      _logger.i('REQUEST[${options.method}] => PATH: ${options.path}');
+      _logger.i('REQUEST[${options.method}] => PATH: ${options.path}${isPublicEndpoint ? ' (PUBLIC)' : ''}');
       handler.next(options);
     } catch (e) {
       _logger.e('Error in request interceptor: $e');
@@ -105,19 +120,15 @@ class ApiClient {
 
     // Handle 401 Unauthorized - token expired or invalid
     if (err.response?.statusCode == 401) {
-      _logger.w('Token expired or invalid - attempting refresh');
+      _logger.w('Token expired or invalid - user needs to login again');
       
-      // Try to refresh token
-      // final refreshed = await _refreshToken();
+      // Clear invalid tokens
+      await _clearTokens();
       
-      // if (refreshed) {
-      //   // Retry the original request
-      //   return handler.resolve(await _retry(err.requestOptions));
-      // } else {
-      //   // Refresh failed - logout user
-      //   await _clearTokens();
-      //   // Navigate to login screen (implement via callback or event bus)
-      // }
+      // Note: In a production app, you would:
+      // 1. Try to refresh the token automatically
+      // 2. Navigate to login screen if refresh fails
+      // 3. Use a global event bus or callback to notify the app
     }
 
     handler.next(err);

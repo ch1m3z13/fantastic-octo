@@ -85,10 +85,10 @@ class _SplashScreenState extends State<SplashScreen>
       if (isAuthenticated) {
         if (userRole == 'driver') {
           // Navigate to Driver Home (Manifest Screen)
-          Navigator.pushReplacementNamed(context, AppRoutes.manifest);
+          Navigator.pushReplacementNamed(context, AppRoutes.driverHome);
         } else {
           // Navigate to Rider Home (My Bookings Screen)
-          Navigator.pushReplacementNamed(context, AppRoutes.myBookings);
+          Navigator.pushReplacementNamed(context, AppRoutes.riderHome);
         }
       } else {
         // Navigate to Login Screen
