@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:sizer/sizer.dart';
 
 import '../../core/app_export.dart';
+import '../../core/api/driver_api_service.dart';
+import '../../core/api/auth_api_service.dart';
+import '../../core/models/driver_models.dart';
+import '../../services/auth_service.dart';
 import '../../widgets/custom_app_bar.dart';
 import '../../widgets/custom_bottom_bar.dart';
-import './widgets/manifest_card_widget.dart';
-import './widgets/map_view_widget.dart';
-import './widgets/pending_requests_banner_widget.dart';
+import '../../widgets/custom_icon_widget.dart';
 import './widgets/quick_stats_widget.dart';
-import './widgets/route_summary_card_widget.dart';
 
-/// Driver Home Screen - Operational dashboard for managing daily routes
-/// Displays route summary, passenger manifest, earnings, and navigation
+/// Driver Home Screen - Now with real API integration
 class DriverHomeScreen extends StatefulWidget {
   const DriverHomeScreen({super.key});
 
@@ -21,110 +22,91 @@ class DriverHomeScreen extends StatefulWidget {
 }
 
 class _DriverHomeScreenState extends State<DriverHomeScreen> {
+  final DriverApiService _driverApi = DriverApiService();
+  
   int _currentBottomNavIndex = 0;
   bool _isLoading = false;
-
-  // Mock data for driver's today route
-  final Map<String, dynamic> todayRoute = {
-    "routeId": "RT001",
-    "routeName": "Dutse - Jabi Express",
-    "departureTime": "07:30 AM",
-    "status": "ready_to_start", // ready_to_start, in_progress, completed
-    "totalPassengers": 12,
-    "confirmedPassengers": 10,
-    "estimatedEarnings": "₦18,000",
-    "virtualBusStops": [
-      {
-        "name": "Dutse Junction",
-        "latitude": 9.0765,
-        "longitude": 7.3986,
-        "pickupOrder": 1,
-        "passengersCount": 3,
-      },
-      {
-        "name": "Gwarinpa 1st Gate",
-        "latitude": 9.0820,
-        "longitude": 7.4050,
-        "pickupOrder": 2,
-        "passengersCount": 4,
-      },
-      {
-        "name": "Kubwa Express",
-        "latitude": 9.0900,
-        "longitude": 7.3800,
-        "pickupOrder": 3,
-        "passengersCount": 3,
-      },
-    ],
-    "currentLocation": {"latitude": 9.0765, "longitude": 7.3986},
-  };
-
-  // Mock driver statistics
-  final Map<String, dynamic> driverStats = {
-    "rating": 4.8,
-    "totalRatings": 156,
-    "completedTripsThisWeek": 18,
-    "weeklyEarnings": "₦324,000",
-    "monthlyEarnings": "₦1,296,000",
-  };
-
-  // Mock pending booking requests
-  final int pendingRequestsCount = 3;
-
-  // Mock weather data
-  final Map<String, String> weatherInfo = {
-    "condition": "Partly Cloudy",
-    "temperature": "28°C",
-    "icon": "partly_cloudy_day",
-  };
+  DriverStats? _driverStats;
+  String? _errorMessage;
 
   @override
   void initState() {
     super.initState();
-    _loadRouteData();
+    _loadDriverData();
   }
 
-  Future<void> _loadRouteData() async {
-    setState(() => _isLoading = true);
-    // Simulate API call
-    await Future.delayed(const Duration(milliseconds: 800));
-    setState(() => _isLoading = false);
+  /// Load driver stats from API
+  Future<void> _loadDriverData() async {
+    final authService = context.read<AuthService>();
+    
+    if (!authService.isAuthenticated || authService.userId == null) {
+      setState(() {
+        _errorMessage = 'Please login as a driver';
+      });
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final stats = await _driverApi.getDriverStats(authService.userId!);
+      
+      setState(() {
+        _driverStats = stats;
+        _isLoading = false;
+      });
+    } on ApiException catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = e.message;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to load driver data';
+      });
+    }
   }
 
   Future<void> _handleRefresh() async {
     HapticFeedback.mediumImpact();
-    await _loadRouteData();
+    await _loadDriverData();
   }
 
-  void _handleStartRoute() {
-    HapticFeedback.mediumImpact();
+  void _handleToggleStatus() async {
+    if (_driverStats == null) return;
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Start Route?',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        content: Text(
-          'Are you ready to begin today\'s route? Make sure you\'ve completed your pre-departure checklist.',
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+    final authService = context.read<AuthService>();
+    final currentStatus = DriverStatus.fromString(_driverStats!.status);
+    final newStatus = currentStatus == DriverStatus.online
+        ? DriverStatus.offline
+        : DriverStatus.online;
+
+    try {
+      await _driverApi.updateDriverStatus(authService.userId!, newStatus);
+      await _loadDriverData(); // Reload to get updated status
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Status updated to ${newStatus.displayName}'),
+            backgroundColor: Colors.green,
           ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/active-ride-screen');
-            },
-            child: const Text('Start Route'),
+        );
+      }
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update status: ${e.message}'),
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
-        ],
-      ),
-    );
+        );
+      }
+    }
   }
 
   void _handleEmergencySupport() {
@@ -173,69 +155,14 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
     );
   }
 
-  void _handleManifestOptions() {
-    HapticFeedback.lightImpact();
-
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: EdgeInsets.all(4.w),
-              child: Text(
-                'Passenger Management',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-            ),
-            ListTile(
-              leading: CustomIconWidget(
-                iconName: 'list_alt',
-                color: Theme.of(context).colorScheme.primary,
-                size: 24,
-              ),
-              title: const Text('View Manifest'),
-              subtitle: const Text('See all passengers for today\'s route'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, AppRoutes.manifest);
-              },
-            ),
-            ListTile(
-              leading: CustomIconWidget(
-                iconName: 'qr_code_scanner',
-                color: Theme.of(context).colorScheme.primary,
-                size: 24,
-              ),
-              title: const Text('Scan QR Code'),
-              subtitle: const Text('Verify passenger boarding'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushNamed(context, AppRoutes.qrCodeScanner);
-              },
-            ),
-            SizedBox(height: 2.h),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _getTimeUntilDeparture() {
-    // Mock calculation - in real app, calculate from actual departure time
-    return "2h 15m";
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: CustomAppBar(
-        title: 'Driver Dashboard',
-        variant: AppBarVariant.standard,
+      appBar: AppBar(
+        title: Text('Driver Dashboard'),
         actions: [
           IconButton(
             icon: CustomIconWidget(
@@ -254,9 +181,9 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
             ),
             onPressed: () {
               HapticFeedback.lightImpact();
-              Navigator.pushNamed(context, '/pending-booking-requests-screen');
+              Navigator.pushNamed(context, AppRoutes.pendingBookingRequests);
             },
-            tooltip: 'Notifications',
+            tooltip: 'Pending Requests',
           ),
         ],
       ),
@@ -268,80 +195,58 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
                   color: theme.colorScheme.primary,
                 ),
               )
-            : SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Pending requests banner
-                    if (pendingRequestsCount > 0)
-                      PendingRequestsBannerWidget(
-                        requestCount: pendingRequestsCount,
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          Navigator.pushNamed(
-                            context,
-                            '/pending-booking-requests-screen',
-                          );
-                        },
+            : _errorMessage != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: theme.colorScheme.error,
+                        ),
+                        SizedBox(height: 2.h),
+                        Text(_errorMessage!),
+                        SizedBox(height: 2.h),
+                        ElevatedButton(
+                          onPressed: _loadDriverData,
+                          child: Text('Try Again'),
+                        ),
+                      ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Padding(
+                      padding: EdgeInsets.all(4.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Status toggle card
+                          _buildStatusCard(theme),
+                          SizedBox(height: 2.h),
+
+                          // Quick stats
+                          QuickStatsWidget(stats: _convertStatsToMap()),
+                          SizedBox(height: 2.h),
+
+                          // Today's earnings
+                          _buildEarningsCard(theme),
+                          SizedBox(height: 2.h),
+
+                          // Quick actions
+                          _buildQuickActions(theme),
+                          SizedBox(height: 2.h),
+
+                          // Performance metrics
+                          _buildPerformanceCard(theme),
+                          
+                          SizedBox(height: 10.h),
+                        ],
                       ),
-
-                    // Route summary card
-                    RouteSummaryCardWidget(
-                      routeData: todayRoute,
-                      weatherInfo: weatherInfo,
-                      timeUntilDeparture: _getTimeUntilDeparture(),
                     ),
-
-                    SizedBox(height: 2.h),
-
-                    // Quick stats
-                    QuickStatsWidget(stats: driverStats),
-
-                    SizedBox(height: 2.h),
-
-                    // Today's manifest card - FIXED: Now shows options
-                    ManifestCardWidget(
-                      totalPassengers: todayRoute["totalPassengers"] as int,
-                      confirmedPassengers:
-                          todayRoute["confirmedPassengers"] as int,
-                      onTap: _handleManifestOptions, // ✅ Fixed
-                    ),
-
-                    SizedBox(height: 2.h),
-
-                    // Map view with virtual bus stops
-                    MapViewWidget(
-                      virtualBusStops: (todayRoute["virtualBusStops"] as List)
-                          .map((stop) => stop as Map<String, dynamic>)
-                          .toList(),
-                      currentLocation:
-                          todayRoute["currentLocation"] as Map<String, dynamic>,
-                    ),
-
-                    SizedBox(height: 10.h),
-                  ],
-                ),
-              ),
+                  ),
       ),
-      floatingActionButton: (todayRoute["status"] as String) == "ready_to_start"
-          ? FloatingActionButton.extended(
-              onPressed: _handleStartRoute,
-              icon: CustomIconWidget(
-                iconName: 'play_arrow',
-                color: theme.colorScheme.onPrimary,
-                size: 24,
-              ),
-              label: Text(
-                'Start Route',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: theme.colorScheme.onPrimary,
-                ),
-              ),
-              backgroundColor: theme.colorScheme.primary,
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       bottomNavigationBar: CustomBottomBar(
         currentIndex: _currentBottomNavIndex,
         variant: CustomBottomBarVariant.driver,
@@ -350,5 +255,290 @@ class _DriverHomeScreenState extends State<DriverHomeScreen> {
         },
       ),
     );
+  }
+
+  Widget _buildStatusCard(ThemeData theme) {
+    if (_driverStats == null) return SizedBox.shrink();
+
+    final isOnline = _driverStats!.status.toUpperCase() == 'ONLINE';
+
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(4.w),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: (isOnline ? Colors.green : Colors.grey)
+                    .withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isOnline ? Icons.check_circle : Icons.cancel,
+                color: isOnline ? Colors.green : Colors.grey,
+                size: 28,
+              ),
+            ),
+            SizedBox(width: 3.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isOnline ? 'You\'re Online' : 'You\'re Offline',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    isOnline
+                        ? 'Ready to accept rides'
+                        : 'Go online to accept rides',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Switch(
+              value: isOnline,
+              onChanged: (_) => _handleToggleStatus(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEarningsCard(ThemeData theme) {
+    if (_driverStats == null) return SizedBox.shrink();
+
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(4.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Today\'s Earnings',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: 2.h),
+            Text(
+              _driverStats!.earningsTodayDisplay,
+              style: theme.textTheme.displaySmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            SizedBox(height: 1.h),
+            Text(
+              '${_driverStats!.completedTripsToday} trips completed today',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            Divider(height: 3.h),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'This Week',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      Text(
+                        _driverStats!.earningsWeekDisplay,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'This Month',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      Text(
+                        _driverStats!.earningsMonthDisplay,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Actions',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: 1.h),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                theme,
+                'Pending Requests',
+                Icons.notifications_active,
+                () => Navigator.pushNamed(context, AppRoutes.pendingBookingRequests),
+              ),
+            ),
+            SizedBox(width: 2.w),
+            Expanded(
+              child: _buildActionButton(
+                theme,
+                'View Manifest',
+                Icons.list_alt,
+                () => Navigator.pushNamed(context, AppRoutes.manifest),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton(
+    ThemeData theme,
+    String label,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: EdgeInsets.all(4.w),
+          child: Column(
+            children: [
+              Icon(icon, size: 32, color: theme.colorScheme.primary),
+              SizedBox(height: 1.h),
+              Text(
+                label,
+                style: theme.textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPerformanceCard(ThemeData theme) {
+    if (_driverStats == null) return SizedBox.shrink();
+
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(4.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Performance',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            SizedBox(height: 2.h),
+            _buildStatRow(
+              theme,
+              'Rating',
+              '${_driverStats!.ratingDisplay} ⭐',
+            ),
+            _buildStatRow(
+              theme,
+              'Total Trips',
+              '${_driverStats!.completedTrips}',
+            ),
+            _buildStatRow(
+              theme,
+              'Total Ratings',
+              '${_driverStats!.totalRatings}',
+            ),
+            _buildStatRow(
+              theme,
+              'Total Earnings',
+              _driverStats!.totalEarningsDisplay,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatRow(ThemeData theme, String label, String value) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 1.h),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Convert DriverStats to map format for QuickStatsWidget
+  Map<String, dynamic> _convertStatsToMap() {
+    if (_driverStats == null) {
+      return {
+        "rating": 0.0,
+        "totalRatings": 0,
+        "completedTripsThisWeek": 0,
+        "weeklyEarnings": "₦0",
+        "monthlyEarnings": "₦0",
+      };
+    }
+
+    return {
+      "rating": _driverStats!.rating,
+      "totalRatings": _driverStats!.totalRatings,
+      "completedTripsThisWeek": _driverStats!.completedTripsThisWeek,
+      "weeklyEarnings": _driverStats!.earningsWeekDisplay,
+      "monthlyEarnings": _driverStats!.earningsMonthDisplay,
+    };
   }
 }

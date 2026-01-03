@@ -27,9 +27,9 @@ class ApiConfig {
   static String get headingToRoutesEndpoint => '/routes/heading-to';
   
   // Driver endpoints
-  static const String driverStatsEndpoint = '/api/v1/drivers/stats';
-  static const String driverManifestEndpoint = '/api/v1/drivers/manifest/active';
-  static const String driverStatusEndpoint = '/api/v1/drivers/status';
+  static const String driverStatsEndpoint = '/drivers/stats';
+  static const String driverManifestEndpoint = '/drivers/manifest/active';
+  static const String driverStatusEndpoint = '/drivers/status';
   
   // Storage keys
   static const String tokenKey = 'auth_token';

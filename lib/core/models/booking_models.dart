@@ -33,110 +33,83 @@ class CreateBookingRequest {
   Map<String, dynamic> toJson() => _$CreateBookingRequestToJson(this);
 }
 
-/// Booking response from API
+/// Booking response matching actual backend structure
 @JsonSerializable()
 class BookingResponse {
   final String id;
   final String riderId;
   final String routeId;
+  final double pickupLatitude;
+  final double pickupLongitude;
+  final double dropoffLatitude;
+  final double dropoffLongitude;
   final String status; // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
-  final LocationInfo pickup;
-  final LocationInfo dropoff;
   final String scheduledPickupTime;
+  final String? estimatedDropoffTime;
   final int passengerCount;
+  final double? fareAmount;
+  final double? distanceKm;
   final String? specialInstructions;
-  final String createdAt;
+  final double? riderRating;
+  final double? driverRating;
+  final String? createdAt;
   final String? confirmedAt;
   final String? startedAt;
   final String? completedAt;
-  final DriverInfo? driver;
 
   BookingResponse({
     required this.id,
     required this.riderId,
     required this.routeId,
+    required this.pickupLatitude,
+    required this.pickupLongitude,
+    required this.dropoffLatitude,
+    required this.dropoffLongitude,
     required this.status,
-    required this.pickup,
-    required this.dropoff,
     required this.scheduledPickupTime,
+    this.estimatedDropoffTime,
     required this.passengerCount,
+    this.fareAmount,
+    this.distanceKm,
     this.specialInstructions,
-    required this.createdAt,
+    this.riderRating,
+    this.driverRating,
+    this.createdAt,
     this.confirmedAt,
     this.startedAt,
     this.completedAt,
-    this.driver,
   });
 
   factory BookingResponse.fromJson(Map<String, dynamic> json) =>
       _$BookingResponseFromJson(json);
 
   Map<String, dynamic> toJson() => _$BookingResponseToJson(this);
-}
 
-/// Location information
-@JsonSerializable()
-class LocationInfo {
-  final double latitude;
-  final double longitude;
-  final String? address;
+  // Helper getters for display
+  String get fareDisplay => fareAmount != null 
+      ? '₦${fareAmount!.toStringAsFixed(0)}' 
+      : 'Fare TBD';
 
-  LocationInfo({
-    required this.latitude,
-    required this.longitude,
-    this.address,
-  });
+  String get distanceDisplay => distanceKm != null
+      ? '${distanceKm!.toStringAsFixed(1)} km'
+      : 'Distance TBD';
 
-  factory LocationInfo.fromJson(Map<String, dynamic> json) =>
-      _$LocationInfoFromJson(json);
-
-  Map<String, dynamic> toJson() => _$LocationInfoToJson(this);
-}
-
-/// Driver information
-@JsonSerializable()
-class DriverInfo {
-  final String id;
-  final String name;
-  final String phone;
-  final VehicleInfo vehicle;
-  final double rating;
-
-  DriverInfo({
-    required this.id,
-    required this.name,
-    required this.phone,
-    required this.vehicle,
-    required this.rating,
-  });
-
-  factory DriverInfo.fromJson(Map<String, dynamic> json) =>
-      _$DriverInfoFromJson(json);
-
-  Map<String, dynamic> toJson() => _$DriverInfoToJson(this);
-}
-
-/// Vehicle information
-@JsonSerializable()
-class VehicleInfo {
-  final String make;
-  final String model;
-  final String year;
-  final String plateNumber;
-  final String? color;
-
-  VehicleInfo({
-    required this.make,
-    required this.model,
-    required this.year,
-    required this.plateNumber,
-    this.color,
-  });
-
-  factory VehicleInfo.fromJson(Map<String, dynamic> json) =>
-      _$VehicleInfoFromJson(json);
-
-  Map<String, dynamic> toJson() => _$VehicleInfoToJson(this);
+  String get statusDisplay {
+    switch (status.toUpperCase()) {
+      case 'PENDING':
+        return 'Waiting for driver';
+      case 'CONFIRMED':
+        return 'Confirmed';
+      case 'IN_PROGRESS':
+        return 'In progress';
+      case 'COMPLETED':
+        return 'Completed';
+      case 'CANCELLED':
+        return 'Cancelled';
+      default:
+        return status;
+    }
+  }
 }
 
 /// Cancel booking request
