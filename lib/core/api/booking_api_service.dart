@@ -21,7 +21,9 @@ class BookingApiService {
         data: request.toJson(),
       );
 
-      if (response.statusCode == 200 && response.data != null) {
+      // ✅ Accept both 200 OK and 201 Created as success
+      if ((response.statusCode == 200 || response.statusCode == 201) && 
+          response.data != null) {
         _logger.i('Booking created successfully');
         return BookingResponse.fromJson(response.data);
       } else {
@@ -163,7 +165,9 @@ class BookingApiService {
         '${ApiConfig.bookingsEndpoint}/$bookingId/confirm',
       );
 
-      if (response.statusCode == 200 && response.data != null) {
+      // ✅ Accept both 200 and 201 for POST operations
+      if ((response.statusCode == 200 || response.statusCode == 201) && 
+          response.data != null) {
         _logger.i('Booking confirmed successfully');
         return BookingResponse.fromJson(response.data);
       } else {
@@ -190,7 +194,9 @@ class BookingApiService {
         '${ApiConfig.bookingsEndpoint}/$bookingId/start',
       );
 
-      if (response.statusCode == 200 && response.data != null) {
+      // ✅ Accept both 200 and 201 for POST operations
+      if ((response.statusCode == 200 || response.statusCode == 201) && 
+          response.data != null) {
         _logger.i('Ride started successfully');
         return BookingResponse.fromJson(response.data);
       } else {
@@ -217,7 +223,9 @@ class BookingApiService {
         '${ApiConfig.bookingsEndpoint}/$bookingId/complete',
       );
 
-      if (response.statusCode == 200 && response.data != null) {
+      // ✅ Accept both 200 and 201 for POST operations
+      if ((response.statusCode == 200 || response.statusCode == 201) && 
+          response.data != null) {
         _logger.i('Ride completed successfully');
         return BookingResponse.fromJson(response.data);
       } else {
@@ -250,7 +258,9 @@ class BookingApiService {
         data: request.toJson(),
       );
 
-      if (response.statusCode == 200 && response.data != null) {
+      // ✅ Accept both 200 and 201 for POST operations
+      if ((response.statusCode == 200 || response.statusCode == 201) && 
+          response.data != null) {
         _logger.i('Booking cancelled successfully');
         return BookingResponse.fromJson(response.data);
       } else {
@@ -280,7 +290,8 @@ class BookingApiService {
         data: request.toJson(),
       );
 
-      if (response.statusCode == 200) {
+      // ✅ Accept both 200 and 201 for POST operations
+      if (response.statusCode == 200 || response.statusCode == 201) {
         _logger.i('Ride rated successfully');
       } else {
         throw ApiException(
